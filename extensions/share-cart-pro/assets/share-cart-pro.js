@@ -157,23 +157,26 @@
         });
         if (!cartResponse.ok) throw new Error("Could not read the current cart.");
         var cart = await cartResponse.json();
-
-        var endpoint = config.generateEndpoint || "/apps/saved-cart/generate/";
+        console.log("Fixing")
+        var endpoint = "/apps/saved-cart/generate";
         if (DEBUG) endpoint += (endpoint.indexOf("?") === -1 ? "?" : "&") + "sc_debug=1";
+        var payload = new URLSearchParams();
+        payload.set("cart", JSON.stringify(cart));
+        payload.set("merchantToken", getMerchantToken());
+
         var saveResponse = await fetch(endpoint, {
           method: "POST",
           credentials: "same-origin",
           cache: "no-store",
-          headers: { 
-            "Content-Type": "application/json", 
-            Accept: "application/json" 
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+            Accept: "application/json"
           },
-          body: JSON.stringify({ 
-            cart: cart, 
-            merchantToken: getMerchantToken() 
-          })
+          body: payload.toString()
         });
         var responseText = await saveResponse.text();
+
+        console.log("Fixed")
         var result = {};
         try {
           result = responseText ? JSON.parse(responseText) : {};

@@ -5,6 +5,21 @@ import {
   validateMerchantStorefrontSession,
 } from "../models/saved-cart.server";
 
+
+async function parseGenerateBody(request) {
+  const contentType = request.headers.get("content-type") || "";
+
+  if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
+    const formData = await request.formData();
+    const cartText = formData.get("cart");
+    return {
+      cart: typeof cartText === "string" ? JSON.parse(cartText) : null,
+      merchantToken: formData.get("merchantToken") || "",
+    };
+  }
+
+  return request.json().catch(() => ({}));
+}
 function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
     ...init,
@@ -34,7 +49,11 @@ export const action = async ({ request }) => {
   const { admin, session } = context;
   if (!session) return json({ error: "App is not installed for this shop." }, { status: 401 });
 
-  const body = await request.json().catch(() => ({}));
+  const body = await parseGenerateBody(request).catch((error) => ({ parseError: error }));
+  if (body.parseError) {
+    return json({ error: "Could not parse cart payload.", stage: "cart_payload", details: debug ? { message: body.parseError.message } : undefined }, { status: 400 });
+  }
+
   const cart = body.cart;
   const merchantToken = body.merchantToken;
 
@@ -97,5 +116,5 @@ export const action = async ({ request }) => {
   }
 };
 
-export const loader = async () => json({ error: "Method not allowed" }, { status: 405 });
+export const loader = async () => json({ ok: true, route: "apps.generate" });
 
