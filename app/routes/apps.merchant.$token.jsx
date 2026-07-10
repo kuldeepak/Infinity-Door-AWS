@@ -1,6 +1,8 @@
 import { authenticate } from "../shopify.server";
 import { validateMerchantStorefrontSession } from "../models/saved-cart.server";
 
+const MERCHANT_COOKIE_NAME = "shareCartProMerchantToken";
+
 function fallbackLiquid(body, status = 200) {
   return new Response(`{% layout none %} ${body}`, {
     status,
@@ -15,11 +17,9 @@ function sessionError(message) {
   </main>`;
 }
 
-function getExpiresAt(value) {
-  if (!value) return new Date(Date.now() + 15 * 60 * 1000).toISOString();
-  if (typeof value === "string") return new Date(value).toISOString();
-  if (typeof value.toISOString === "function") return value.toISOString();
-  return new Date(value).toISOString();
+function getMaxAgeSeconds(expiresAt) {
+  const remainingMs = new Date(expiresAt).getTime() - Date.now();
+  return Math.max(Math.floor(remainingMs / 1000), 60);
 }
 
 export const loader = async ({ request, params }) => {
@@ -57,7 +57,7 @@ export const loader = async ({ request, params }) => {
     return liquid(sessionError("This storefront merchant session has expired. Open a new session from the embedded app."), { layout: false });
   }
 
-  const expiresAt = getExpiresAt(merchantSession.expiresAt);
+  const maxAgeSeconds = getMaxAgeSeconds(merchantSession.expiresAt);
 
   return liquid(`
     <main style="max-width: 640px; margin: 48px auto; padding: 0 20px; font-family: sans-serif;">
@@ -65,8 +65,7 @@ export const loader = async ({ request, params }) => {
       <p>You can now generate saved cart links from the cart page.</p>
     </main>
     <script>
-      sessionStorage.setItem("shareCartProMerchantToken", ${JSON.stringify(params.token)});
-      sessionStorage.setItem("shareCartProMerchantTokenExpiresAt", ${JSON.stringify(expiresAt)});
+      document.cookie = ${JSON.stringify(MERCHANT_COOKIE_NAME)} + "=" + encodeURIComponent(${JSON.stringify(params.token)}) + "; max-age=${maxAgeSeconds}; path=/; SameSite=Lax; Secure";
       window.location.href = "/cart";
     </script>
   `, { layout: false });

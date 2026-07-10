@@ -55,10 +55,8 @@
 
   function getMerchantToken() {
     try {
-      var token = sessionStorage.getItem("shareCartProMerchantToken");
-      var expiresAt = sessionStorage.getItem("shareCartProMerchantTokenExpiresAt");
-      var isValid = Boolean(token && expiresAt && new Date(expiresAt).getTime() > Date.now());
-      return isValid ? token : "";
+      var match = document.cookie.match(/(?:^|; )shareCartProMerchantToken=([^;]*)/);
+      return match ? decodeURIComponent(match[1]) : "";
     } catch (_error) {
       return "";
     }

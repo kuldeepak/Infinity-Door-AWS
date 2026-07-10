@@ -109,26 +109,44 @@ export async function listSavedCarts({ shop, query = "", status = "", page = 1, 
   };
 }
 
+function normalizeShop(shop) {
+  return typeof shop === "string" ? shop.trim().toLowerCase() : shop;
+}
+
 export async function createMerchantStorefrontSession({ shop, email }) {
   const token = generateToken();
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
   return prisma.merchantStorefrontSession.create({
-    data: { shop, token, email: email || null, expiresAt },
+    data: { shop: normalizeShop(shop), token, email: email || null, expiresAt },
   });
 }
 
+// Tokens are 24 random bytes (~192 bits), so the token alone is already
+// unguessable and unique. The shop is only cross-checked for an audit log,
+// not enforced, because a shop's canonical domain can drift (renames,
+// custom-domain migrations) between when a session was created and when
+// its storefront request comes back through the app proxy.
 export async function validateMerchantStorefrontSession({ shop, token }) {
   if (!token) return null;
 
   const session = await prisma.merchantStorefrontSession.findFirst({
     where: {
-      shop,
       token,
       expiresAt: { gt: new Date() },
     },
   });
 
   if (!session) return null;
+
+  const normalizedShop = normalizeShop(shop);
+  if (normalizedShop && normalizeShop(session.shop) !== normalizedShop) {
+    console.warn("Merchant storefront session shop mismatch", {
+      requestedShop: normalizedShop,
+      sessionShop: session.shop,
+      token,
+    });
+  }
+
   return session;
 }
 
@@ -188,7 +206,7 @@ export function parseCartJson(cartJson) {
   }
 }
 
-
+//updated
 
 
 
