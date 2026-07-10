@@ -5,46 +5,45 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
-// enough when changing adapters.
-// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+// MySQL is used on the server. Long cart payloads need explicit long text
+// columns because the default MySQL String type is too small for cart JSON.
 datasource db {
-  provider = "sqlite"
-  url      = "file:dev.sqlite"
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 model Session {
-  id            String    @id
-  shop          String
-  state         String
-  isOnline      Boolean   @default(false)
-  scope         String?
-  expires       DateTime?
-  accessToken   String
-  userId        BigInt?
-  firstName     String?
-  lastName      String?
-  email         String?
-  accountOwner  Boolean   @default(false)
-  locale        String?
-  collaborator  Boolean?  @default(false)
-  emailVerified Boolean?  @default(false)
-  refreshToken        String?
+  id                  String    @id @db.VarChar(255)
+  shop                String    @db.VarChar(255)
+  state               String    @db.VarChar(255)
+  isOnline            Boolean   @default(false)
+  scope               String?   @db.VarChar(255)
+  expires             DateTime?
+  accessToken         String    @db.Text
+  userId              BigInt?
+  firstName           String?   @db.VarChar(255)
+  lastName            String?   @db.VarChar(255)
+  email               String?   @db.VarChar(255)
+  accountOwner        Boolean   @default(false)
+  locale              String?   @db.VarChar(255)
+  collaborator        Boolean?  @default(false)
+  emailVerified       Boolean?  @default(false)
+  refreshToken        String?   @db.Text
   refreshTokenExpires DateTime?
 }
 
 model SavedCart {
   id               Int             @id @default(autoincrement())
-  shop             String
-  token            String          @unique
-  status           String          @default("Not recovered")
-  customerName     String?
-  customerEmail    String?
-  region           String?
+  shop             String          @db.VarChar(255)
+  token            String          @unique @db.VarChar(255)
+  status           String          @default("Not recovered") @db.VarChar(64)
+  customerName     String?         @db.VarChar(255)
+  customerEmail    String?         @db.VarChar(255)
+  region           String?         @db.VarChar(255)
   subtotal         Int             @default(0)
   total            Int             @default(0)
-  cartJson         String
-  recoveredOrderId String?
+  cartJson         String          @db.LongText
+  recoveredOrderId String?         @db.VarChar(255)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   items            SavedCartItem[]
@@ -56,15 +55,15 @@ model SavedCart {
 model SavedCartItem {
   id             Int       @id @default(autoincrement())
   savedCartId    Int
-  productId      String?
-  variantId      String
-  title          String
-  variantTitle   String?
-  sku            String?
+  productId      String?   @db.VarChar(255)
+  variantId      String    @db.VarChar(255)
+  title          String    @db.VarChar(255)
+  variantTitle   String?   @db.VarChar(255)
+  sku            String?   @db.VarChar(255)
   quantity       Int
   price          Int
-  propertiesJson String?
-  imageUrl       String?
+  propertiesJson String?   @db.LongText
+  imageUrl       String?   @db.Text
   savedCart      SavedCart @relation(fields: [savedCartId], references: [id], onDelete: Cascade)
 
   @@index([savedCartId])
@@ -73,9 +72,9 @@ model SavedCartItem {
 
 model MerchantStorefrontSession {
   id        Int      @id @default(autoincrement())
-  shop      String
-  token     String   @unique
-  email     String?
+  shop      String   @db.VarChar(255)
+  token     String   @unique @db.VarChar(255)
+  email     String?  @db.VarChar(255)
   expiresAt DateTime
   createdAt DateTime @default(now())
 

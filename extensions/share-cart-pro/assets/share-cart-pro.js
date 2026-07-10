@@ -1,6 +1,7 @@
 (function () {
   var CART_PATH_PATTERN = /\/cart\/?$/;
   var BLOCK_SELECTOR = "[data-share-cart-pro-block]";
+  var DEBUG = new URLSearchParams(window.location.search).get("sc_debug") === "1";
   var CHECKOUT_SELECTORS = [
     'button[name="checkout"]',
     'input[name="checkout"]',
@@ -149,14 +150,28 @@
       setMessage("", false);
 
       try {
-        var cartResponse = await fetch("/cart.js", { headers: { Accept: "application/json" } });
+        var cartResponse = await fetch("/cart.js", {
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: { Accept: "application/json" }
+        });
         if (!cartResponse.ok) throw new Error("Could not read the current cart.");
         var cart = await cartResponse.json();
 
-        var saveResponse = await fetch(config.generateEndpoint || "/apps/saved-cart/generate/", {
+        var endpoint = config.generateEndpoint || "/apps/saved-cart/generate/";
+        if (DEBUG) endpoint += (endpoint.indexOf("?") === -1 ? "?" : "&") + "sc_debug=1";
+        var saveResponse = await fetch(endpoint, {
           method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ cart: cart, merchantToken: getMerchantToken() })
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: { 
+            "Content-Type": "application/json", 
+            Accept: "application/json" 
+          },
+          body: JSON.stringify({ 
+            cart: cart, 
+            merchantToken: getMerchantToken() 
+          })
         });
         var responseText = await saveResponse.text();
         var result = {};
@@ -165,7 +180,12 @@
         } catch (_error) {
           result = { error: responseText };
         }
-        if (!saveResponse.ok) throw new Error(result.error || ("Could not generate the saved cart link. HTTP " + saveResponse.status));
+        if (!saveResponse.ok) {
+          var returnedHtml = /^\s*<!doctype html/i.test(responseText) || /^\s*<html/i.test(responseText);
+          if (DEBUG) console.error("ShareCartPro generate failed", { status: saveResponse.status, result: result, responseText: responseText });
+          if (returnedHtml) throw new Error("App proxy returned storefront HTML instead of the saved-cart API response. Check the Shopify app proxy configuration and deployment.");
+          throw new Error(result.error || ("Could not generate the saved cart link. HTTP " + saveResponse.status));
+        }
 
         var absoluteUrl = new URL(result.url, window.location.origin).href;
         await navigator.clipboard.writeText(absoluteUrl);
