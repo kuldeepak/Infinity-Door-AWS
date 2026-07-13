@@ -1,15 +1,16 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
-// MySQL is used on the server. Long cart payloads need explicit long text
-// columns because the default MySQL String type is too small for cart JSON.
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum CartStatus {
+  NOT_RECOVERED
+  RECOVERED
+  EXPIRED
 }
 
 model Session {
@@ -33,38 +34,61 @@ model Session {
 }
 
 model SavedCart {
-  id               Int             @id @default(autoincrement())
-  shop             String          @db.VarChar(255)
-  token            String          @unique @db.VarChar(255)
-  status           String          @default("Not recovered") @db.VarChar(64)
-  customerName     String?         @db.VarChar(255)
-  customerEmail    String?         @db.VarChar(255)
-  region           String?         @db.VarChar(255)
-  subtotal         Int             @default(0)
-  total            Int             @default(0)
-  cartJson         String          @db.Text
-  recoveredOrderId String?         @db.VarChar(255)
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  id               Int         @id @default(autoincrement())
+  shop             String      @db.VarChar(255)
+  token            String      @unique @db.VarChar(255)
+
+  status           CartStatus  @default(NOT_RECOVERED)
+
+  customerName     String?     @db.VarChar(255)
+  customerEmail    String?     @db.VarChar(255)
+
+  region           String?     @db.VarChar(255)
+
+  // Stored in smallest currency unit (e.g. cents/paise)
+  subtotal         Int         @default(0)
+  total            Int         @default(0)
+
+  cartJson         Json
+
+  recoveredOrderId String?     @db.VarChar(255)
+
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
   items            SavedCartItem[]
 
   @@index([shop, createdAt])
   @@index([shop, status])
+  @@index([customerEmail])
 }
 
 model SavedCartItem {
   id             Int       @id @default(autoincrement())
   savedCartId    Int
+
   productId      String?   @db.VarChar(255)
   variantId      String    @db.VarChar(255)
+
   title          String    @db.VarChar(255)
   variantTitle   String?   @db.VarChar(255)
+
   sku            String?   @db.VarChar(255)
+
   quantity       Int
+
+  // Stored in smallest currency unit (e.g. cents/paise)
   price          Int
-  propertiesJson String?   @db.Text
+
+  propertiesJson Json?
+
   imageUrl       String?   @db.Text
-  savedCart      SavedCart @relation(fields: [savedCartId], references: [id], onDelete: Cascade)
+
+  savedCart      SavedCart @relation(
+    fields: [savedCartId],
+    references: [id],
+    onDelete: Cascade
+  )
 
   @@index([savedCartId])
   @@index([variantId])
@@ -72,9 +96,12 @@ model SavedCartItem {
 
 model MerchantStorefrontSession {
   id        Int      @id @default(autoincrement())
+
   shop      String   @db.VarChar(255)
   token     String   @unique @db.VarChar(255)
+
   email     String?  @db.VarChar(255)
+
   expiresAt DateTime
   createdAt DateTime @default(now())
 
