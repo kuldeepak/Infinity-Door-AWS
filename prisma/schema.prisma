@@ -76,19 +76,13 @@ model SavedCartItem {
   sku            String?   @db.VarChar(255)
 
   quantity       Int
-
-  // Stored in smallest currency unit (e.g. cents/paise)
   price          Int
 
   propertiesJson Json?
 
   imageUrl       String?   @db.Text
 
-  savedCart      SavedCart @relation(
-    fields: [savedCartId],
-    references: [id],
-    onDelete: Cascade
-  )
+  savedCart      SavedCart @relation(fields: [savedCartId], references: [id], onDelete: Cascade)
 
   @@index([savedCartId])
   @@index([variantId])
