@@ -8,7 +8,7 @@ generator client {
 // MySQL is used on the server. Long cart payloads need explicit long text
 // columns because the default MySQL String type is too small for cart JSON.
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
