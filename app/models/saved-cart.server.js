@@ -2,8 +2,8 @@ import crypto from "node:crypto";
 import prisma from "../db.server";
 
 export const SAVED_CART_STATUS = {
-  notRecovered: "Not recovered",
-  recovered: "Recovered",
+  notRecovered: "NOT_RECOVERED",
+  recovered: "RECOVERED",
 };
 
 export function generateToken(bytes = 24) {
