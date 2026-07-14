@@ -4,13 +4,14 @@
     assign can_generate_saved_cart = true
   endif
 %}
+
 <script>
   window.ShareCartPro = window.ShareCartPro || {};
   window.ShareCartPro.canGenerate = {{ can_generate_saved_cart | json }};
-  window.ShareCartPro.shop = {{ shop.permanent_domain | json }};
-  window.ShareCartPro.generateEndpoint = "{{ routes.root_url }}apps/saved-cart/generate";
+  window.ShareCartPro.generateEndpoint = "{{ routes.root_url }}apps/saved-cart/generate/";
 </script>
 {{ 'share-cart-pro.js' | asset_url | script_tag }}
+
 {% schema %}
 {
   "name": "SaveCart",
@@ -18,3 +19,4 @@
   "settings": []
 }
 {% endschema %}
+
