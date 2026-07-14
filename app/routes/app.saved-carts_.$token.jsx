@@ -6,6 +6,7 @@ import { deleteSavedCart, getSavedCart, parseCartJson } from "../models/saved-ca
 import { DeleteSavedCartModal } from "../components/DeleteSavedCartModal";
 import { SavedCartLineItems } from "../components/SavedCartLineItems";
 import { SavedCartSummary } from "../components/SavedCartSummary";
+import { copyToClipboard } from "../utils/copy-to-clipboard";
 
 export const loader = async ({ request, params }) => {
   const { session } = await authenticate.admin(request);
@@ -40,8 +41,13 @@ export default function SavedCartDetail() {
   const isDeleting = fetcher.state !== "idle";
 
   const copyUrl = async () => {
-    await navigator.clipboard.writeText(cartUrl);
-    shopify.toast.show("Saved cart URL copied");
+    try {
+      await copyToClipboard(cartUrl);
+      shopify.toast.show("Saved cart URL copied");
+    } catch (error) {
+      console.error("Could not copy saved cart URL", error);
+      shopify.toast.show("Could not copy the saved cart URL", { isError: true });
+    }
   };
 
   const deleteCart = () => {

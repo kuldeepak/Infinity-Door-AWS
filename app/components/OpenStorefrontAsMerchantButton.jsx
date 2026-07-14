@@ -21,7 +21,7 @@ export function OpenStorefrontAsMerchantButton({ slot }) {
 
   return (
     <s-button slot={slot} onClick={openStorefront} loading={isOpening}>
-      Open storefront as merchant
+      Open RFQ for Client
     </s-button>
   );
 }

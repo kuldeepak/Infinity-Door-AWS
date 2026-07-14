@@ -3,6 +3,7 @@
   var BLOCK_SELECTOR = "[data-share-cart-pro-block]";
   var DEBUG = new URLSearchParams(window.location.search).get("sc_debug") === "1";
   var CHECKOUT_SELECTORS = [
+    'button#checkout.cart__checkout-button[name="checkout"]',
     'input[type="submit"][name="update"].cart__update',
     'input[name="update"].update_button.Cont_Shopping',
     'button[name="checkout"]',
@@ -27,6 +28,7 @@
     'form[action*="/cart"]'
   ];
   var SUMMARY_SELECTORS = [
+    'cart__ctas',
     '[data-cart-summary]',
     '[data-cart-totals]',
     '.cart-summary',
@@ -62,6 +64,39 @@
       return match ? decodeURIComponent(match[1]) : "";
     } catch (_error) {
       return "";
+    }
+  }
+
+  async function copyToClipboard(text) {
+    function copyWithSelection() {
+      var textArea = document.createElement("textarea");
+      var activeElement = document.activeElement;
+      textArea.value = text;
+      textArea.setAttribute("readonly", "");
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.select();
+      textArea.setSelectionRange(0, text.length);
+
+      try {
+        return document.execCommand("copy");
+      } finally {
+        textArea.remove();
+        if (activeElement && activeElement.focus) activeElement.focus();
+      }
+    }
+
+    try {
+      if (!navigator.clipboard || !navigator.clipboard.writeText) {
+        throw new Error("Clipboard API is unavailable");
+      }
+
+      await navigator.clipboard.writeText(text);
+    } catch (clipboardError) {
+      if (copyWithSelection()) return;
+      throw clipboardError;
     }
   }
 
@@ -221,7 +256,7 @@
         }
 
         var absoluteUrl = new URL(result.url, window.location.origin).href;
-        await navigator.clipboard.writeText(absoluteUrl);
+        await copyToClipboard(absoluteUrl);
         setMessage("Saved cart link copied to clipboard.", false);
       } catch (error) {
         setMessage(error.message || "Could not generate the saved cart link.", true);
