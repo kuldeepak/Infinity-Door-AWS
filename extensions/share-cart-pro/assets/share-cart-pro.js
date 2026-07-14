@@ -3,6 +3,8 @@
   var BLOCK_SELECTOR = "[data-share-cart-pro-block]";
   var DEBUG = new URLSearchParams(window.location.search).get("sc_debug") === "1";
   var CHECKOUT_SELECTORS = [
+    'input[type="submit"][name="update"].cart__update',
+    'input[name="update"].update_button.Cont_Shopping',
     'button[name="checkout"]',
     'input[name="checkout"]',
     'button[id*="checkout" i]',
@@ -97,6 +99,10 @@
   function findCheckoutContainer(checkoutButton) {
     if (!checkoutButton) return null;
 
+    if (checkoutButton.matches('input[name="update"].update_button')) {
+      return checkoutButton;
+    }
+
     for (var i = 0; i < CHECKOUT_CONTAINER_SELECTORS.length; i += 1) {
       var container = checkoutButton.closest(CHECKOUT_CONTAINER_SELECTORS[i]);
       if (container && isVisible(container)) return container;
@@ -125,7 +131,9 @@
     button.type = "button";
     button.textContent = "Generate Link";
     button.setAttribute("data-share-cart-pro-button", "true");
-    button.style.width = "100%";
+    button.classList.add("button");
+
+    button.style.width = "auto"; 
     button.style.minHeight = "44px";
     button.style.cursor = "pointer";
 
@@ -144,7 +152,7 @@
     }
 
     button.addEventListener("click", async function () {
-      var config = window.ShareCartPro || {};
+      console.log("genrate button clicked");
       button.disabled = true;
       button.textContent = "Generating...";
       setMessage("", false);
@@ -158,11 +166,20 @@
         if (!cartResponse.ok) throw new Error("Could not read the current cart.");
         var cart = await cartResponse.json();
         console.log("Fixing")
-        var endpoint = "/apps/saved-cart/generate";
-        if (DEBUG) endpoint += (endpoint.indexOf("?") === -1 ? "?" : "&") + "sc_debug=1";
+        var endpoint = (window.ShareCartPro || {}).generateEndpoint || "/apps/saved-cart/generate/";
+        // if (DEBUG) endpoint += (endpoint.indexOf("?") === -1 ? "?" : "&") + "sc_debug=1";
         var payload = new URLSearchParams();
         payload.set("cart", JSON.stringify(cart));
         payload.set("merchantToken", getMerchantToken());
+        payload.set("shop", (window.ShareCartPro || {}).shop || "");
+
+        console.info("ShareCartPro proxy request", {
+          endpoint: endpoint,
+          itemCount: Array.isArray(cart.items) ? cart.items.length : 0,
+          shop: (window.ShareCartPro || {}).shop || "",
+          hasMerchantToken: Boolean(getMerchantToken())
+        });
+
 
         var saveResponse = await fetch(endpoint, {
           method: "POST",
@@ -176,7 +193,20 @@
         });
         var responseText = await saveResponse.text();
 
-        console.log("Fixed")
+        var responseDetails = {
+          status: saveResponse.status,
+          statusText: saveResponse.statusText,
+          url: saveResponse.url,
+          redirected: saveResponse.redirected,
+          responseType: saveResponse.type,
+          contentType: saveResponse.headers.get("content-type"),
+          requestId: saveResponse.headers.get("x-request-id") || saveResponse.headers.get("x-saved-cart-request-id"),
+          bodyPreview: responseText.replace(/\s+/g, " ").slice(0, 500)
+        };
+        console.info("ShareCartPro proxy response", responseDetails);
+
+
+        console.log("Fixes")
         var result = {};
         try {
           result = responseText ? JSON.parse(responseText) : {};
@@ -185,8 +215,8 @@
         }
         if (!saveResponse.ok) {
           var returnedHtml = /^\s*<!doctype html/i.test(responseText) || /^\s*<html/i.test(responseText);
-          if (DEBUG) console.error("ShareCartPro generate failed", { status: saveResponse.status, result: result, responseText: responseText });
-          if (returnedHtml) throw new Error("App proxy returned storefront HTML instead of the saved-cart API response. Check the Shopify app proxy configuration and deployment.");
+          console.error("ShareCartPro generate failed", responseDetails);
+          if (returnedHtml) throw new Error("App proxy returned storefront HTML (HTTP " + saveResponse.status + "). Check the browser console for proxy diagnostics.");
           throw new Error(result.error || ("Could not generate the saved cart link. HTTP " + saveResponse.status));
         }
 
@@ -263,4 +293,3 @@
     boot();
   }
 })();
-
