@@ -26,7 +26,7 @@ export function SavedCartLineItems({ items, currency = "USD" }) {
                       {item.variantTitle && <div>{item.variantTitle}</div>}
                       {Object.keys(properties).length > 0 && (
                         <div style={{ marginTop: 6, color: "#616161" }}>
-                          {Object.entries(properties).map(([key, value]) => <div key={key}>{key}: {String(value)}</div>)}
+                          {Object.entries(properties).map(([key, value]) => <div key={key}>{key}: {formatPropertyValue(value)}</div>)}
                         </div>
                       )}
                     </div>
@@ -46,10 +46,19 @@ export function SavedCartLineItems({ items, currency = "USD" }) {
 
 function parseProperties(value) {
   try {
-    return JSON.parse(value || "{}");
+    const parsed = typeof value === "string" ? JSON.parse(value || "{}") : value || {};
+    return parsed.properties && typeof parsed.properties === "object" && !Array.isArray(parsed.properties)
+      ? parsed.properties
+      : parsed;
   } catch (_error) {
     return {};
   }
+}
+
+function formatPropertyValue(value) {
+  if (value == null) return "";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
 }
 
 const thStyle = { borderBottom: "1px solid #ddd", padding: "10px 8px", textAlign: "left", fontSize: "12px", fontWeight: 600 };

@@ -66,7 +66,7 @@ export const loader = async ({ request, params }) => {
             body: JSON.stringify({ attributes: payload.attributes, note: payload.note }),
           });
 
-          window.location.href = "/checkout";
+          window.location.href = "/cart";
         } catch (error) {
           showError(error.message || "One or more products are unavailable.");
         }

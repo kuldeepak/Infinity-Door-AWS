@@ -1,5 +1,5 @@
-import fs from "node:fs";
-import path from "node:path";
+// import fs from "node:fs";
+// import path from "node:path";
 import { authenticate } from "../shopify.server";
 import {
   createSavedCart,
@@ -7,14 +7,11 @@ import {
   validateMerchantStorefrontSession,
 } from "../models/saved-cart.server";
 
-const DEBUG_LOG_PATH = path.join(process.cwd(), "saved-cart-generate-debug.log");
+// const DEBUG_LOG_PATH = path.join(process.cwd(), "saved-cart-generate-debug.log");
 
-function logDebug(entry) {
-  try {
-    fs.appendFileSync(DEBUG_LOG_PATH, `${new Date().toISOString()} ${JSON.stringify(entry)}\n`);
-  } catch (_error) {
-    // best-effort logging only
-  }
+function logDebug() {
+  // File logging is intentionally disabled.
+  // fs.appendFileSync(DEBUG_LOG_PATH, "debug entry");
 }
 
 

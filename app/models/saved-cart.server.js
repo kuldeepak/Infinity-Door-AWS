@@ -18,6 +18,9 @@ export function moneyFromCents(cents, currency = "USD") {
 }
 
 export function normalizeCartItem(item) {
+  const properties = { ...(item.properties || {}) };
+  delete properties._saved_cart_token;
+
   return {
     productId: item.product_id ? String(item.product_id) : null,
     variantId: item.variant_id ? String(item.variant_id) : String(item.id || ""),
@@ -26,14 +29,26 @@ export function normalizeCartItem(item) {
     sku: item.sku || null,
     quantity: Number(item.quantity) || 0,
     price: Number(item.final_price ?? item.price ?? 0) || 0,
-    propertiesJson: JSON.stringify(item.properties || {}),
+    propertiesJson: JSON.stringify(properties),
     imageUrl: item.image || item.featured_image?.url || null,
   };
 }
 
 export async function createSavedCart({ shop, cart, customer }) {
   const token = generateToken();
-  const items = Array.isArray(cart.items) ? cart.items.map(normalizeCartItem) : [];
+  const cleanCart = {
+    ...cart,
+    attributes: { ...(cart.attributes || {}) },
+    items: Array.isArray(cart.items)
+      ? cart.items.map((item) => {
+          const properties = { ...(item.properties || {}) };
+          delete properties._saved_cart_token;
+          return { ...item, properties };
+        })
+      : [],
+  };
+  delete cleanCart.attributes._saved_cart_token;
+  const items = cleanCart.items.map(normalizeCartItem);
   const subtotal = Number(cart.items_subtotal_price ?? cart.original_total_price ?? cart.total_price ?? 0) || 0;
   const total = Number(cart.total_price ?? subtotal) || 0;
 
@@ -47,7 +62,7 @@ export async function createSavedCart({ shop, cart, customer }) {
       region: customer?.region || null,
       subtotal,
       total,
-      cartJson: JSON.stringify(cart),
+      cartJson: JSON.stringify(cleanCart),
       items: {
         create: items,
       },

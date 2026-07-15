@@ -22,7 +22,7 @@ export const loader = async ({ request, params }) => {
     items: (cart.items || []).map((item) => ({
       id: item.variant_id || item.id,
       quantity: item.quantity,
-      properties: item.properties || {},
+      properties: { ...(item.properties || {}), _saved_cart_token: savedCart.token },
     })),
     attributes: { ...(cart.attributes || {}), _saved_cart_token: savedCart.token },
     note: cart.note || "",
@@ -32,19 +32,16 @@ export const loader = async ({ request, params }) => {
     <main style="max-width: 720px; margin: 48px auto; padding: 0 20px; font-family: inherit;">
       <h1>Restoring saved cart</h1>
       <p id="share-cart-pro-status">Please wait while we rebuild your cart.</p>
-      <pre id="share-cart-pro-error" style="display:none; white-space:pre-wrap; color:#8a1f11; background:#fff1f0; padding:16px; border-radius:8px;"></pre>
     </main>
     <script type="application/json" id="share-cart-pro-restore-data">${escapeScriptJson(payload)}</script>
     <script>
       (async function restoreSavedCart() {
         const status = document.getElementById("share-cart-pro-status");
-        const errorBox = document.getElementById("share-cart-pro-error");
         const payload = JSON.parse(document.getElementById("share-cart-pro-restore-data").textContent);
 
         function showError(message) {
-          status.textContent = "We could not restore this saved cart.";
-          errorBox.style.display = "block";
-          errorBox.textContent = message;
+          status.textContent = "";
+          console.error("ShareCartPro cart restoration failed:", message);
         }
 
         try {
@@ -60,13 +57,17 @@ export const loader = async ({ request, params }) => {
             throw new Error(detail.description || detail.message || "One or more products are unavailable.");
           }
 
-          await fetch("/cart/update.js", {
+          const updateResponse = await fetch("/cart/update.js", {
             method: "POST",
             headers: { "Content-Type": "application/json", "Accept": "application/json" },
             body: JSON.stringify({ attributes: payload.attributes, note: payload.note }),
           });
 
-          window.location.href = "/checkout";
+          if (!updateResponse.ok) {
+            throw new Error("The restored cart details could not be saved.");
+          }
+
+          window.location.href = "/cart";
         } catch (error) {
           showError(error.message || "One or more products are unavailable.");
         }

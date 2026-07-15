@@ -1,7 +1,6 @@
 (function () {
   var CART_PATH_PATTERN = /\/cart\/?$/;
   var BLOCK_SELECTOR = "[data-share-cart-pro-block]";
-  var DEBUG = new URLSearchParams(window.location.search).get("sc_debug") === "1";
   var CHECKOUT_SELECTORS = [
     'button#checkout.cart__checkout-button[name="checkout"]',
     'input[type="submit"][name="update"].cart__update',
@@ -259,7 +258,8 @@
         await copyToClipboard(absoluteUrl);
         setMessage("Saved cart link copied to clipboard.", false);
       } catch (error) {
-        setMessage(error.message || "Could not generate the saved cart link.", true);
+        console.error("ShareCartPro saved cart generation failed", error);
+        setMessage("", false);
       } finally {
         button.disabled = false;
         button.textContent = "Generate Link";
@@ -327,4 +327,100 @@
   } else {
     boot();
   }
+})();
+
+(function () {
+  var TOKEN_PROPERTY = "_saved_cart_token";
+  var validationTimer;
+  var lastVisible;
+
+  function comparableProperties(properties) {
+    var result = {};
+    Object.keys(properties || {}).sort().forEach(function (key) {
+      if (key !== TOKEN_PROPERTY) result[key] = properties[key];
+    });
+    return JSON.stringify(result);
+  }
+
+  function isComplete(cart, expected) {
+    return expected.items.length > 0 && expected.items.every(function (savedItem) {
+      var present = (cart.items || []).reduce(function (quantity, cartItem) {
+        var properties = cartItem.properties || {};
+        var matches = String(cartItem.variant_id) === String(savedItem.variantId) &&
+          properties[TOKEN_PROPERTY] === expected.token &&
+          comparableProperties(properties) === comparableProperties(savedItem.properties);
+        return quantity + (matches ? Number(cartItem.quantity) || 0 : 0);
+      }, 0);
+      return present >= (Number(savedItem.quantity) || 0);
+    });
+  }
+
+  function render(visible) {
+    var container = document.getElementById("restore-cart-checkout");
+    var quote = document.getElementById("request_a_quote");
+    if (!container) return;
+    var hasButton = Boolean(container.querySelector('input[name="checkout"]'));
+    var quoteCorrect = !quote || (visible ? quote.style.display === "none" : quote.style.display !== "none");
+    if (lastVisible === visible && hasButton === visible && quoteCorrect) return;
+    lastVisible = visible;
+    container.replaceChildren();
+
+    if (visible) {
+      var form = document.createElement("form");
+      form.action = "/checkout";
+      form.method = "post";
+      var button = document.createElement("input");
+      button.type = "submit";
+      button.name = "checkout";
+      button.className = "btn btn--small-wide";
+      button.value = "Proceed To Checkout";
+      form.appendChild(button);
+      container.appendChild(form);
+    }
+
+    if (quote) {
+      if (!quote.hasAttribute("data-share-cart-pro-display")) {
+        quote.setAttribute("data-share-cart-pro-display", quote.style.display || "");
+      }
+      quote.style.display = visible ? "none" : quote.getAttribute("data-share-cart-pro-display");
+    }
+  }
+
+  async function validate() {
+    if (!/\/cart\/?$/.test(window.location.pathname) || !document.getElementById("restore-cart-checkout")) return;
+    try {
+      var cartResponse = await fetch("/cart.js", { credentials: "same-origin", cache: "no-store" });
+      if (!cartResponse.ok) return render(false);
+      var cart = await cartResponse.json();
+      var token = cart.attributes && cart.attributes._saved_cart_token;
+      if (!token) return render(false);
+      var expectedResponse = await fetch("/apps/saved-cart/status/" + encodeURIComponent(token) + "/", {
+        credentials: "same-origin", cache: "no-store", headers: { Accept: "application/json" }
+      });
+      if (!expectedResponse.ok) return render(false);
+      render(isComplete(cart, await expectedResponse.json()));
+    } catch (error) {
+      console.error("ShareCartPro restored cart validation failed", error);
+      render(false);
+    }
+  }
+
+  function scheduleValidation() {
+    clearTimeout(validationTimer);
+    validationTimer = setTimeout(validate, 200);
+  }
+
+  var originalFetch = window.fetch;
+  window.fetch = function () {
+    var request = arguments[0];
+    var url = typeof request === "string" ? request : request && request.url || "";
+    var response = originalFetch.apply(this, arguments);
+    if (/\/cart\/(add|change|update|clear)\.js/.test(url)) response.then(scheduleValidation, scheduleValidation);
+    return response;
+  };
+
+  document.addEventListener("change", scheduleValidation);
+  document.addEventListener("click", scheduleValidation);
+  new MutationObserver(scheduleValidation).observe(document.documentElement, { childList: true, subtree: true });
+  scheduleValidation();
 })();
