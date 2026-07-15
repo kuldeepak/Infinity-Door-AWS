@@ -31,7 +31,7 @@ export default function SavedCartsIndex() {
   };
 
   return (
-    <s-page heading="Saved Carts">
+    <s-page heading="RFQ List">
       <OpenStorefrontAsMerchantButton slot="primary-action" />
 
       <s-section>

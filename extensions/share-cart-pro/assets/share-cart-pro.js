@@ -358,9 +358,13 @@
   function render(visible) {
     var container = document.getElementById("restore-cart-checkout");
     var quote = document.getElementById("request_a_quote");
+    var draftCreate = document.getElementById("draft_create");
+    var alternateActions = [quote, draftCreate].filter(Boolean);
     if (!container) return;
     var hasButton = Boolean(container.querySelector('input[name="checkout"]'));
-    var quoteCorrect = !quote || (visible ? quote.style.display === "none" : quote.style.display !== "none");
+    var quoteCorrect = alternateActions.every(function (element) {
+      return visible ? element.style.display === "none" : element.style.display !== "none";
+    });
     if (lastVisible === visible && hasButton === visible && quoteCorrect) return;
     lastVisible = visible;
     container.replaceChildren();
@@ -378,12 +382,12 @@
       container.appendChild(form);
     }
 
-    if (quote) {
-      if (!quote.hasAttribute("data-share-cart-pro-display")) {
-        quote.setAttribute("data-share-cart-pro-display", quote.style.display || "");
+    alternateActions.forEach(function (element) {
+      if (!element.hasAttribute("data-share-cart-pro-display")) {
+        element.setAttribute("data-share-cart-pro-display", element.style.display || "");
       }
-      quote.style.display = visible ? "none" : quote.getAttribute("data-share-cart-pro-display");
-    }
+      element.style.display = visible ? "none" : element.getAttribute("data-share-cart-pro-display");
+    });
   }
 
   async function validate() {

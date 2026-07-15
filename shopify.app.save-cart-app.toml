@@ -3,7 +3,7 @@
 client_id = "848c2314b00f2f919e94ec169ee169f0"
 application_url = "https://savecart.infinitydoors.net"
 embedded = true
-name = "Share & Shop"
+name = "RFQ"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
