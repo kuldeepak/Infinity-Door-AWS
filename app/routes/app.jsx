@@ -17,7 +17,7 @@ export default function App() {
     <AppProvider embedded apiKey={apiKey}>
       <s-app-nav>
         <s-link href="/app/saved-carts">Save Cart list</s-link>
-        <s-link href="/app">Info</s-link>
+        <s-link href="/app">RFQ</s-link>
       </s-app-nav>
       <Outlet />
     </AppProvider>

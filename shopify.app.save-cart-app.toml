@@ -1,30 +1,27 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "848c2314b00f2f919e94ec169ee169f0"
-name = "Share & Shop"
 application_url = "https://savecart.infinitydoors.net"
 embedded = true
+name = "Share & Shop"
 
-[build]
-automatically_update_urls_on_dev = true
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_customers,write_app_proxy,write_metaobject_definitions,write_metaobjects,write_products"
+
+[auth]
+redirect_urls = [ "https://savecart.infinitydoors.net/api/auth" ]
 
 [webhooks]
 api_version = "2026-10"
 
   [[webhooks.subscriptions]]
-  uri = "/webhooks/app/uninstalled"
-  topics = [ "app/uninstalled" ]
-
-  [[webhooks.subscriptions]]
   uri = "/webhooks/app/scopes_update"
   topics = [ "app/scopes_update" ]
 
-[access_scopes]
-# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_customers,write_metaobject_definitions,write_metaobjects,write_products,write_app_proxy"
-
-[auth]
-redirect_urls = [ "https://savecart.infinitydoors.net/api/auth" ]
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/uninstalled"
+  topics = [ "app/uninstalled" ]
 
 [app_proxy]
 url = "https://savecart.infinitydoors.net/apps/saved-cart"
@@ -54,3 +51,6 @@ required = true
 [metaobjects.app.example.fields.description]
 name = "Description"
 type = "multi_line_text_field"
+
+[build]
+automatically_update_urls_on_dev = true

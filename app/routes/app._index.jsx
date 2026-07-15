@@ -9,7 +9,7 @@ export const loader = async ({ request }) => {
 
 export default function Index() {
   return (
-    <s-page heading="SaveCart Info">
+    <s-page heading="RFQ">
       <OpenStorefrontAsMerchantButton slot="primary-action" />
 
       <s-section heading="Saved cart links">
