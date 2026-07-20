@@ -330,6 +330,9 @@
 })();
 
 (function () {
+  var ENABLE_RESTORED_CART_CHECKOUT = false;
+  if (!ENABLE_RESTORED_CART_CHECKOUT) return;
+
   var TOKEN_PROPERTY = "_saved_cart_token";
   var validationTimer;
   var lastVisible;
