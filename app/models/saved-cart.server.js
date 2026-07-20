@@ -59,6 +59,7 @@ export async function createSavedCart({ shop, cart, customer }) {
       status: SAVED_CART_STATUS.notRecovered,
       customerName: customer?.name || null,
       customerEmail: customer?.email || null,
+      customerPhone: customer?.phone || null,
       region: customer?.region || null,
       subtotal,
       total,
@@ -84,6 +85,13 @@ export async function deleteSavedCart({ shop, token }) {
   });
 }
 
+export async function updateSavedCartCustomer({ shop, token, customerName, customerEmail, customerPhone, region }) {
+  return prisma.savedCart.updateMany({
+    where: { shop, token },
+    data: { customerName, customerEmail, customerPhone, region },
+  });
+}
+
 export async function listSavedCarts({ shop, query = "", status = "", page = 1, pageSize = 20 }) {
   const where = {
     shop,
@@ -94,6 +102,7 @@ export async function listSavedCarts({ shop, query = "", status = "", page = 1, 
             { token: { contains: query } },
             { customerName: { contains: query } },
             { customerEmail: { contains: query } },
+            { customerPhone: { contains: query } },
             { region: { contains: query } },
           ],
         }
@@ -175,6 +184,7 @@ export async function getAuthorizedCustomer({ admin, customerId }) {
       customer(id: $id) {
         displayName
         email
+        phone
         tags
         defaultAddress {
           country
@@ -196,6 +206,7 @@ export async function getAuthorizedCustomer({ admin, customerId }) {
   return {
     name: customer.displayName,
     email: customer.email,
+    phone: customer.phone,
     region: [customer.defaultAddress?.province, customer.defaultAddress?.country].filter(Boolean).join(", ") || null,
   };
 }

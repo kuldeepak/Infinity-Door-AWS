@@ -34,29 +34,30 @@ model Session {
 }
 
 model SavedCart {
-  id               Int         @id @default(autoincrement())
-  shop             String      @db.VarChar(255)
-  token            String      @unique @db.VarChar(255)
+  id    Int    @id @default(autoincrement())
+  shop  String @db.VarChar(255)
+  token String @unique @db.VarChar(255)
 
-  status           CartStatus  @default(NOT_RECOVERED)
+  status CartStatus @default(NOT_RECOVERED)
 
-  customerName     String?     @db.VarChar(255)
-  customerEmail    String?     @db.VarChar(255)
+  customerName  String? @db.VarChar(255)
+  customerEmail String? @db.VarChar(255)
+  customerPhone String? @db.VarChar(50)
 
-  region           String?     @db.VarChar(255)
+  region String? @db.VarChar(255)
 
   // Stored in smallest currency unit (e.g. cents/paise)
-  subtotal         Int         @default(0)
-  total            Int         @default(0)
+  subtotal Int @default(0)
+  total    Int @default(0)
 
-  cartJson         Json
+  cartJson Json
 
-  recoveredOrderId String?     @db.VarChar(255)
+  recoveredOrderId String? @db.VarChar(255)
 
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  items            SavedCartItem[]
+  items SavedCartItem[]
 
   @@index([shop, createdAt])
   @@index([shop, status])
@@ -64,37 +65,37 @@ model SavedCart {
 }
 
 model SavedCartItem {
-  id             Int       @id @default(autoincrement())
-  savedCartId    Int
+  id          Int @id @default(autoincrement())
+  savedCartId Int
 
-  productId      String?   @db.VarChar(255)
-  variantId      String    @db.VarChar(255)
+  productId String? @db.VarChar(255)
+  variantId String  @db.VarChar(255)
 
-  title          String    @db.VarChar(255)
-  variantTitle   String?   @db.VarChar(255)
+  title        String  @db.VarChar(255)
+  variantTitle String? @db.VarChar(255)
 
-  sku            String?   @db.VarChar(255)
+  sku String? @db.VarChar(255)
 
-  quantity       Int
-  price          Int
+  quantity Int
+  price    Int
 
   propertiesJson Json?
 
-  imageUrl       String?   @db.Text
+  imageUrl String? @db.Text
 
-  savedCart      SavedCart @relation(fields: [savedCartId], references: [id], onDelete: Cascade)
+  savedCart SavedCart @relation(fields: [savedCartId], references: [id], onDelete: Cascade)
 
   @@index([savedCartId])
   @@index([variantId])
 }
 
 model MerchantStorefrontSession {
-  id        Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  shop      String   @db.VarChar(255)
-  token     String   @unique @db.VarChar(255)
+  shop  String @db.VarChar(255)
+  token String @unique @db.VarChar(255)
 
-  email     String?  @db.VarChar(255)
+  email String? @db.VarChar(255)
 
   expiresAt DateTime
   createdAt DateTime @default(now())

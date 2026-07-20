@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { redirect, useFetcher, useLoaderData } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
-import { deleteSavedCart, getSavedCart, parseCartJson } from "../models/saved-cart.server";
+import { deleteSavedCart, getSavedCart, parseCartJson, updateSavedCartCustomer } from "../models/saved-cart.server";
 import { DeleteSavedCartModal } from "../components/DeleteSavedCartModal";
 import { SavedCartLineItems } from "../components/SavedCartLineItems";
 import { SavedCartSummary } from "../components/SavedCartSummary";
@@ -20,25 +20,64 @@ export const loader = async ({ request, params }) => {
   };
 };
 
+function formString(formData, key, maxLength) {
+  return String(formData.get(key) || "").trim().slice(0, maxLength);
+}
+
 export const action = async ({ request, params }) => {
   const { session } = await authenticate.admin(request);
   const formData = await request.formData();
   const intent = formData.get("intent");
 
-  if (intent !== "delete") {
+  if (intent === "delete") {
+    await deleteSavedCart({ shop: session.shop, token: params.token });
+    return redirect("/app/saved-carts?deleted=1");
+  }
+
+  if (intent !== "update_customer") {
     throw new Response("Unsupported action", { status: 400 });
   }
 
-  await deleteSavedCart({ shop: session.shop, token: params.token });
-  return redirect("/app/saved-carts?deleted=1");
+  const customerName = formString(formData, "customerName", 255);
+  const customerEmail = formString(formData, "customerEmail", 255);
+  const customerPhone = formString(formData, "customerPhone", 50);
+  const region = formString(formData, "region", 255);
+  const errors = {};
+
+  if (customerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+    errors.customerEmail = "Enter a valid email address";
+  }
+  if (customerPhone && !/^[0-9+().\-\s]+$/.test(customerPhone)) {
+    errors.customerPhone = "Use only numbers, spaces, +, -, parentheses, or periods";
+  }
+  if (Object.keys(errors).length) return { ok: false, errors };
+
+  const result = await updateSavedCartCustomer({
+    shop: session.shop,
+    token: params.token,
+    customerName: customerName || null,
+    customerEmail: customerEmail || null,
+    customerPhone: customerPhone || null,
+    region: region || null,
+  });
+  if (!result.count) throw new Response("Saved cart not found", { status: 404 });
+
+  return { ok: true };
 };
 
 export default function SavedCartDetail() {
   const { cart, cartJson, cartUrl } = useLoaderData();
-  const fetcher = useFetcher();
+  const deleteFetcher = useFetcher();
+  const customerFetcher = useFetcher();
   const shopify = useAppBridge();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const isDeleting = fetcher.state !== "idle";
+  const isDeleting = deleteFetcher.state !== "idle";
+  const isSavingCustomer = customerFetcher.state !== "idle";
+  const customerErrors = customerFetcher.data?.errors || {};
+
+  useEffect(() => {
+    if (customerFetcher.data?.ok) shopify.toast.show("Customer details updated");
+  }, [customerFetcher.data, shopify]);
 
   const copyUrl = async () => {
     try {
@@ -51,7 +90,7 @@ export default function SavedCartDetail() {
   };
 
   const deleteCart = () => {
-    fetcher.submit({ intent: "delete" }, { method: "POST" });
+    deleteFetcher.submit({ intent: "delete" }, { method: "POST" });
   };
 
   return (
@@ -62,7 +101,6 @@ export default function SavedCartDetail() {
 
       <s-section>
         <s-stack direction="inline" gap="base" alignItems="center">
-          {/* <s-badge tone={cart.status === "Recovered" ? "success" : "info"}>{cart.status}</s-badge> */}
           <s-text>{cartUrl}</s-text>
         </s-stack>
       </s-section>
@@ -71,11 +109,16 @@ export default function SavedCartDetail() {
       <SavedCartSummary cart={cart} />
 
       <s-section slot="aside" heading="Customer">
-        <s-stack direction="block" gap="base">
-          <s-text>Name: {cart.customerName || "-"}</s-text>
-          <s-text>Email: {cart.customerEmail || "-"}</s-text>
-          <s-text>Region: {cart.region || "-"}</s-text>
-        </s-stack>
+        <customerFetcher.Form method="post">
+          <input type="hidden" name="intent" value="update_customer" />
+          <s-stack direction="block" gap="base">
+            <s-text-field label="Name" name="customerName" defaultValue={cart.customerName || ""} />
+            <s-text-field label="Email" name="customerEmail" type="email" defaultValue={cart.customerEmail || ""} error={customerErrors.customerEmail} />
+            <s-text-field label="Phone number" name="customerPhone" type="tel" defaultValue={cart.customerPhone || ""} error={customerErrors.customerPhone} />
+            <s-text-field label="Region" name="region" defaultValue={cart.region || ""} />
+            <s-button type="submit" variant="primary" loading={isSavingCustomer}>Update customer details</s-button>
+          </s-stack>
+        </customerFetcher.Form>
       </s-section>
 
       <s-section slot="aside" heading="Cart details">

@@ -10,7 +10,7 @@
   window.ShareCartPro.canGenerate = {{ can_generate_saved_cart | json }};
   window.ShareCartPro.generateEndpoint = "{{ routes.root_url }}apps/saved-cart/generate/";
 </script>
-{{ 'share-cart-pro.js' | asset_url | script_tag }}
+<script src="{{ 'share-cart-pro.js' | asset_url }}" defer></script>
 
 {% schema %}
 {
